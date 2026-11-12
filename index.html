@@ -46,7 +46,7 @@ p{margin:0;max-width:520px;font-size:clamp(13px,2.8vw,16px);line-height:1.35;tex
 
   <div class="ov" id="menu">
     <h1>Camila y Lizy</h1>
-    <p>Corre por el patio, salta piedras y cactus, agáchate cuando pase el jote y junta todos los huesos que puedas.</p>
+    <p>Corre por el patio, salta los limoneros y los árboles de mango, agáchate cuando pase el jote y junta todos los huesos que puedas.</p>
     <div class="pick">
       <button class="dog" data-dog="camila"><canvas width="64" height="40" id="thC"></canvas><b>Camila</b><span>Chiquita y sabia. Es tan bajita que los jotes le pasan por encima.</span></button>
       <button class="dog" data-dog="lizy"><canvas width="64" height="40" id="thL"></canvas><b>Lizy</b><span>Grande y saltarina. Salta más alto que nadie.</span></button>
@@ -261,7 +261,7 @@ function drawBg(c, off, lvl){
   // posiciones fijas en el camino: la casa y el auto cada 1800, separados para que no se tapen
   const each = (every, shift, fn)=>{ for(let n=Math.floor((po-120-shift)/every); n*every+shift < po+W+10; n++){ const x = n*every+shift-po; if(x>-120) fn(x); } };
   each(1800, 380, x=> drawHouse(c, x, GROUND-3, dc));
-  each(1800, 1250, x=> drawCar(c, x, GROUND-3, dc));
+  each(1800, 1300, x=> drawCar(c, x, GROUND-3, dc));
   // suelo
   rect(c, 0, GROUND, W, H-GROUND, i>=3?"#8c7f6e":"#cbb994");
   c.fillStyle = i>=3?"#776b5c":"#b3a17c";
@@ -273,10 +273,9 @@ function drawBg(c, off, lvl){
 // Casa de madera turquesa con techo de zinc en forma de pirámide, tapa café y puerta café
 function drawHouse(c, x, y, dc){
   const T=dc("#2b9db3"), Td=dc("#23869a"), Br=dc("#b5763d"), Brd=dc("#8e5a2c"), Z=dc("#c9ced6"), Zd=dc("#a3a9b3"), D=dc("#6e4224");
-  const w=92, h=50, rh=24;
+  const w=112, h=58, rh=28;
   rect(c, x, y-h, w, h, T);
   c.fillStyle=Td; for(let k=6;k<w;k+=9) c.fillRect(Math.round(x+k), y-h+6, 1, h-7);
-  rect(c, x+w*.5-.5, y-h+6, 1, h-6, Td);
   // tapa café bajo el techo
   rect(c, x-4, y-h-6, w+8, 6, Br); rect(c, x-4, y-h-1, w+8, 1, Brd);
   // techo pirámide de zinc
@@ -286,8 +285,9 @@ function drawHouse(c, x, y, dc){
   for(let k=-6;k<=w+6;k+=4){ const bx=x+k; c.beginPath(); c.moveTo(bx, y-h-6); c.lineTo(cx+(bx-cx)*.08, top+2); c.stroke(); }
   rect(c, cx-1, top-1, 2, 2, Zd);
   // puerta café
-  rect(c, x+58, y-34, 18, 34, D); rect(c, x+59.5, y-32.5, 15, 31, dc("#7d4c2a"));
-  rect(c, x+60, y-22, 14, 1, D); rect(c, x+71, y-17, 2, 2, dc("#e2c06a"));
+  const dx = x + w/2 - 10;   // puerta al medio
+  rect(c, dx, y-38, 20, 38, D); rect(c, dx+1.5, y-36.5, 17, 35, dc("#7d4c2a"));
+  rect(c, dx+2, y-25, 16, 1, D); rect(c, dx+15, y-19, 2, 2, dc("#e2c06a"));
   rect(c, x, y-1, w, 1, dc("#7d8b8e"));
 }
 // Auto amarillo tipo SUV pequeño, visto de lado, con capó largo
@@ -310,13 +310,21 @@ function drawCar(c, x, y, dc){
 
 // ---------- Obstáculos y huesos ----------
 const TYPES = {
-  piedra:{w:14,h:9, draw:(c,o)=>{ ell(c,o.x+7,o.y-4,7.5,5,"#8d8a86"); ell(c,o.x+5,o.y-6,3.5,2,"#b3b0aa"); }},
-  cactus:{w:9,h:24, draw:(c,o)=>{ const C="#3e7d3c",Cl="#5aa055";
-    rect(c,o.x+2.5,o.y-24,4.5,24,C); rect(c,o.x+3.5,o.y-23,1.2,21,Cl);
-    rect(c,o.x-1,o.y-15,3.5,2.5,C); rect(c,o.x-1,o.y-20,2.5,6,C);
-    rect(c,o.x+7,o.y-12,3.5,2.5,C); rect(c,o.x+8.5,o.y-17,2.5,6,C); }},
-  lavatorio:{w:18,h:8, draw:(c,o)=>{ poly(c,[o.x,o.y-8,o.x+18,o.y-8,o.x+15,o.y,o.x+3,o.y],"#ee5a92"); rect(c,o.x-1,o.y-9,20,2,"#ff86b3"); }},
-  pallet:{w:20,h:13, draw:(c,o)=>{ for(let k=0;k<3;k++) rect(c,o.x,o.y-13+k*5,20,2.5,"#b07a45"); rect(c,o.x+1,o.y-13,2.5,13,"#8e5e32"); rect(c,o.x+9,o.y-13,2.5,13,"#8e5e32"); rect(c,o.x+16.5,o.y-13,2.5,13,"#8e5e32"); }},
+  // Limonero chico con limones de Pica (chiquitos, amarillo verdoso)
+  limonero:{w:15,h:15, draw:(c,o)=>{ const x=o.x, y=o.y;
+    rect(c,x+6.5,y-6,2,6,"#6b4a2b");
+    ell(c,x+7.5,y-10,7.5,5.5,"#2f6b34"); ell(c,x+4.5,y-11.5,4,3.5,"#3d8a40"); ell(c,x+10.5,y-12,3.8,3.2,"#3d8a40"); ell(c,x+7.5,y-13.5,3.5,2.5,"#4f9e4a");
+    [[3,-9],[8,-12],[12,-8.5],[6,-7],[10.5,-14],[4.5,-13]].forEach(([fx,fy])=> ell(c,x+fx,y+fy,1.2,1.1,"#e3e04a")); }},
+  // Limonero grande
+  limonero2:{w:19,h:21, draw:(c,o)=>{ const x=o.x, y=o.y;
+    rect(c,x+8.5,y-8,2.4,8,"#6b4a2b"); rect(c,x+6.5,y-10,2,3,"#6b4a2b");
+    ell(c,x+9.5,y-14,9.5,7,"#2f6b34"); ell(c,x+5,y-16,5,4.5,"#3d8a40"); ell(c,x+14,y-16,4.8,4.2,"#3d8a40"); ell(c,x+9.5,y-19,5,3,"#4f9e4a");
+    [[3,-13],[7,-17],[12,-12],[16,-15],[9.5,-10],[13,-19],[5,-19.5],[17,-11]].forEach(([fx,fy])=> ell(c,x+fx,y+fy,1.3,1.2,"#e3e04a")); }},
+  // Árbol de mango chico con mangos amarillos con rojo
+  mango:{w:17,h:25, draw:(c,o)=>{ const x=o.x, y=o.y;
+    rect(c,x+7.5,y-11,2.6,11,"#5e3d22"); rect(c,x+5,y-14,2,4,"#5e3d22"); rect(c,x+10.5,y-14,2,4,"#5e3d22");
+    ell(c,x+8.5,y-17,9,8,"#1f5a2a"); ell(c,x+4,y-19,5,4.5,"#2b7136"); ell(c,x+13,y-19,5,4.5,"#2b7136"); ell(c,x+8.5,y-23,5.5,3,"#358342");
+    [[4,-13.5],[13,-12.5],[9,-15]].forEach(([fx,fy])=>{ ell(c,x+fx,y+fy,1.6,2.2,"#f2b632"); ell(c,x+fx+.6,y+fy-.6,.9,1,"#e0573a"); rect(c,x+fx-.2,y+fy-3,.6,1.2,"#5e3d22"); }); }},
   jote:{w:20,h:8, fly:true, draw:(c,o,t)=>{ const f=Math.sin(t*14+o.x*.1);
     ell(c,o.x+10,o.y-4,7,3,"#1b1a1d"); ell(c,o.x+18,o.y-5.5,2.6,2.2,"#c4473b"); rect(c,o.x+20,o.y-5.5,2.2,1,"#e8d7c0");
     poly(c,[o.x+6,o.y-5,o.x+14,o.y-5,o.x+10,o.y-5-8*f],"#2a282d"); }}
@@ -341,17 +349,17 @@ function setDuck(v){ if(state!=="play") return; S.duck = v; if(v && S.y < GROUND
 
 function spawn(){
   const lv = S.lvl, r = Math.random();
-  let type = "piedra";
+  let type = "limonero";
   if(lv>=2 && r<.22) type="jote";
-  else if(r<.42) type="cactus";
-  else if(r<.6) type="lavatorio";
-  else if(lv>=3 && r<.75) type="pallet";
+  else if(r<.5) type="limonero";
+  else if(r<.78) type = lv>=2 ? "limonero2" : "limonero";
+  else type="mango";
   const t = TYPES[type];
   const o = { type, x:W+10, w:t.w, h:t.h, y:GROUND };
   if(t.fly){ o.y = GROUND - 19 - Math.random()*4; }
   S.obs.push(o);
-  // a veces dos piedras juntas en niveles altos
-  if(lv>=4 && type==="piedra" && Math.random()<.4) S.obs.push({type:"piedra", x:W+26, w:14, h:9, y:GROUND});
+  // a veces dos limoneros juntos en niveles altos
+  if(lv>=4 && type==="limonero" && Math.random()<.4) S.obs.push({type:"limonero", x:W+28, w:15, h:15, y:GROUND});
   const minGap = S.speed*0.85 + 40;
   S.next = minGap + Math.random()*S.speed*0.9;
 }
