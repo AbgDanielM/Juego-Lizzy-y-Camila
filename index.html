@@ -114,27 +114,43 @@ function beep(f1, f2, dur, type="square", vol=.07){
   }catch(e){}
 }
 const sJump = ()=>beep(380, 760, .14);
-// Ladrido sintetizado: un "guau" corto. Lizy más grave, Camila más agudo.
+// Ladrido sintetizado: "GUAU" con ataque fuerte, voz áspera y resonancias de hocico.
+// Lizy: ladrido grande, grave y más largo. Camila: ladrido chico y agudo.
+function grit(){ const shaper = AC.createWaveShaper(); const n=1024, cu=new Float32Array(n); for(let i=0;i<n;i++){ const x=i/(n-1)*2-1; cu[i]=Math.tanh(x*3.2); } shaper.curve=cu; return shaper; }
 function bark(dogK, small){
   if(muted) return;
   try{
     AC = AC || new (window.AudioContext||window.webkitAudioContext)();
-    const t = AC.currentTime, big = dogK==="lizy";
-    const f0 = (big?330:620) * (small?1.25:1), f1 = (big?170:360) * (small?1.25:1), dur = small? .11 : .2;
-    const o = AC.createOscillator(), o2 = AC.createOscillator(), g = AC.createGain(), bp = AC.createBiquadFilter();
-    o.type="sawtooth"; o2.type="square";
-    o.frequency.setValueAtTime(f0*.8, t); o.frequency.linearRampToValueAtTime(f0, t+dur*.25); o.frequency.exponentialRampToValueAtTime(f1, t+dur);
-    o2.frequency.setValueAtTime(f0*.5, t); o2.frequency.exponentialRampToValueAtTime(f1*.5, t+dur);
-    bp.type="bandpass"; bp.frequency.setValueAtTime(big?900:1500, t); bp.Q.value=1.2;
-    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(.35, t+.015); g.gain.exponentialRampToValueAtTime(.12, t+dur*.6); g.gain.exponentialRampToValueAtTime(0.0001, t+dur);
-    // ruido para que suene más a ladrido
-    const n = AC.createBufferSource(), buf = AC.createBuffer(1, AC.sampleRate*dur, AC.sampleRate), d = buf.getChannelData(0);
-    for(let i=0;i<d.length;i++) d[i] = (Math.random()*2-1) * (1 - i/d.length);
-    n.buffer = buf; const ng = AC.createGain(); ng.gain.value = .25;
-    o.connect(bp); o2.connect(bp); n.connect(ng); ng.connect(bp); bp.connect(g); g.connect(AC.destination);
-    o.start(t); o2.start(t); n.start(t); o.stop(t+dur); o2.stop(t+dur); n.stop(t+dur);
+    const t = AC.currentTime + .005, big = dogK==="lizy", k = small ? 1.18 : 1;
+    const dur = (big ? .34 : .2) * (small ? .7 : 1);
+    const fStart = (big ? 190 : 430)*k, fPeak = (big ? 290 : 620)*k, fEnd = (big ? 120 : 300)*k;
+    const out = AC.createGain();
+    out.gain.setValueAtTime(0.0001, t); out.gain.exponentialRampToValueAtTime(big ? .55 : .45, t+.012);
+    out.gain.setValueAtTime(big ? .5 : .4, t+dur*.35); out.gain.exponentialRampToValueAtTime(0.0001, t+dur);
+    // voz: dos osciladores levemente desafinados + distorsión suave
+    const pre = AC.createGain(); pre.gain.value = .6;
+    [["sawtooth",1],["square",.995]].forEach(([ty,det])=>{
+      const o = AC.createOscillator(); o.type = ty;
+      o.frequency.setValueAtTime(fStart*det, t); o.frequency.exponentialRampToValueAtTime(fPeak*det, t+dur*.18); o.frequency.exponentialRampToValueAtTime(fEnd*det, t+dur);
+      o.connect(pre); o.start(t); o.stop(t+dur+.02);
+    });
+    // aire/ruido al comienzo (el "g" del guau)
+    const nb = AC.createBuffer(1, Math.floor(AC.sampleRate*dur), AC.sampleRate), d = nb.getChannelData(0);
+    for(let i=0;i<d.length;i++) d[i] = (Math.random()*2-1) * Math.exp(-i/(AC.sampleRate*.05));
+    const ns = AC.createBufferSource(); ns.buffer = nb; const ng = AC.createGain(); ng.gain.value = big ? .5 : .35; ns.connect(ng); ng.connect(pre); ns.start(t);
+    const sh = grit(); pre.connect(sh);
+    // resonancias del hocico (formantes): "a" abierta que se cierra en "u"
+    const f1 = AC.createBiquadFilter(), f2 = AC.createBiquadFilter(), lp = AC.createBiquadFilter();
+    f1.type = f2.type = "bandpass"; f1.Q.value = 4; f2.Q.value = 5;
+    f1.frequency.setValueAtTime((big?700:1100)*k, t); f1.frequency.linearRampToValueAtTime((big?450:800)*k, t+dur);
+    f2.frequency.setValueAtTime((big?1500:2300)*k, t); f2.frequency.linearRampToValueAtTime((big?1000:1700)*k, t+dur);
+    lp.type = "lowpass"; lp.frequency.value = big ? 2600 : 4000;
+    const g1 = AC.createGain(), g2 = AC.createGain(), dry = AC.createGain(); g1.gain.value = 1.4; g2.gain.value = .8; dry.gain.value = .25;
+    sh.connect(f1); sh.connect(f2); sh.connect(dry); f1.connect(g1); f2.connect(g2);
+    g1.connect(lp); g2.connect(lp); dry.connect(lp); lp.connect(out); out.connect(AC.destination);
   }catch(e){}
 }
+
 // ---------- Música de fondo estilo consola portátil (melodía original) ----------
 const NOTE = n=>{ if(!n||n==="-"||n===".") return 0; const m=n.match(/^([A-G])(#?)(\d)$/); const st={C:0,D:2,E:4,F:5,G:7,A:9,B:11}[m[1]]+(m[2]?1:0); return 440*Math.pow(2,(st+12*(+m[3]+1)-69)/12); };
 // 16 compases de 8 corcheas. "-" = sostiene la nota anterior, "." = silencio
