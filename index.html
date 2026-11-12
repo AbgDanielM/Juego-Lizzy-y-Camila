@@ -462,8 +462,11 @@ const TYPES = {
     ell(c,x+8.5,y-17,9,8,"#1f5a2a"); ell(c,x+4,y-19,5,4.5,"#2b7136"); ell(c,x+13,y-19,5,4.5,"#2b7136"); ell(c,x+8.5,y-23,5.5,3,"#358342");
     [[4,-13.5],[13,-12.5],[9,-15]].forEach(([fx,fy])=>{ ell(c,x+fx,y+fy,1.6,2.2,"#f2b632"); ell(c,x+fx+.6,y+fy-.6,.9,1,"#e0573a"); rect(c,x+fx-.2,y+fy-3,.6,1.2,"#5e3d22"); }); }},
   jote:{w:20,h:8, fly:true, draw:(c,o,t)=>{ const f=Math.sin(t*14+o.x*.1);
+    // vuela hacia la izquierda (hacia la perrita): se dibuja espejado para que la cabeza vaya adelante
+    c.save(); c.translate(o.x*2+o.w, 0); c.scale(-1, 1);
     ell(c,o.x+10,o.y-4,7,3,"#1b1a1d"); ell(c,o.x+18,o.y-5.5,2.6,2.2,"#c4473b"); rect(c,o.x+20,o.y-5.5,2.2,1,"#e8d7c0");
-    poly(c,[o.x+6,o.y-5,o.x+14,o.y-5,o.x+10,o.y-5-8*f],"#2a282d"); }}
+    poly(c,[o.x+6,o.y-5,o.x+14,o.y-5,o.x+10,o.y-5-8*f],"#2a282d");
+    c.restore(); }}
 };
 // Marraqueta: pan chileno de cuatro "cachitos" dorados
 function marraqueta(c, x, y){
