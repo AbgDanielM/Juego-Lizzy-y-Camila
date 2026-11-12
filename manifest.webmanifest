@@ -1,0 +1,17 @@
+{
+  "name": "Camila y Lizy",
+  "short_name": "Camila y Lizy",
+  "description": "Juego de carreras con Camila y Lizy: salta, agáchate y junta huesos.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#2b2340",
+  "theme_color": "#2b2340",
+  "lang": "es-CL",
+  "icons": [
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png"},
+    {"src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}
