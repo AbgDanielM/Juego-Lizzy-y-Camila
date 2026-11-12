@@ -46,9 +46,9 @@ p{margin:0;max-width:520px;font-size:clamp(13px,2.8vw,16px);line-height:1.35;tex
 
   <div class="ov" id="menu">
     <h1>Camila y Lizy</h1>
-    <p>Corre por el patio, salta los limoneros y los árboles de mango, agáchate cuando pase el jote y junta todos los huesos y marraquetas que puedas.</p>
+    <p>Corre por el patio, salta los limoneros y los árboles de mango, agáchate cuando pase el cuculí y junta todos los huesos y marraquetas que puedas.</p>
     <div class="pick">
-      <button class="dog" data-dog="camila"><canvas width="64" height="40" id="thC"></canvas><b>Camila</b><span>Chiquita y sabia. Es tan bajita que los jotes le pasan por encima.</span></button>
+      <button class="dog" data-dog="camila"><canvas width="64" height="40" id="thC"></canvas><b>Camila</b><span>Chiquita y sabia. Es tan bajita que los cuculíes le pasan por encima.</span></button>
       <button class="dog" data-dog="lizy"><canvas width="64" height="40" id="thL"></canvas><b>Lizy</b><span>Grande y saltarina. Salta más alto que nadie.</span></button>
     </div>
     <p class="small" id="recTxt"></p>
@@ -461,12 +461,17 @@ const TYPES = {
     rect(c,x+7.5,y-11,2.6,11,"#5e3d22"); rect(c,x+5,y-14,2,4,"#5e3d22"); rect(c,x+10.5,y-14,2,4,"#5e3d22");
     ell(c,x+8.5,y-17,9,8,"#1f5a2a"); ell(c,x+4,y-19,5,4.5,"#2b7136"); ell(c,x+13,y-19,5,4.5,"#2b7136"); ell(c,x+8.5,y-23,5.5,3,"#358342");
     [[4,-13.5],[13,-12.5],[9,-15]].forEach(([fx,fy])=>{ ell(c,x+fx,y+fy,1.6,2.2,"#f2b632"); ell(c,x+fx+.6,y+fy-.6,.9,1,"#e0573a"); rect(c,x+fx-.2,y+fy-3,.6,1.2,"#5e3d22"); }); }},
-  jote:{w:20,h:8, fly:true, draw:(c,o,t)=>{ const f=Math.sin(t*14+o.x*.1);
-    // vuela hacia la izquierda (hacia la perrita): se dibuja espejado para que la cabeza vaya adelante
-    c.save(); c.translate(o.x*2+o.w, 0); c.scale(-1, 1);
-    ell(c,o.x+10,o.y-4,7,3,"#1b1a1d"); ell(c,o.x+18,o.y-5.5,2.6,2.2,"#c4473b"); rect(c,o.x+20,o.y-5.5,2.2,1,"#e8d7c0");
-    poly(c,[o.x+6,o.y-5,o.x+14,o.y-5,o.x+10,o.y-5-8*f],"#2a282d");
-    c.restore(); }}
+  // Cuculí: paloma café grisácea, ala con franja blanca, anillo azul en el ojo, patas rosadas. Vuela hacia la izquierda.
+  cuculi:{w:18,h:8, fly:true, draw:(c,o,t)=>{ const f=Math.sin(t*16+o.x*.1), x=o.x, y=o.y;
+    poly(c,[x+13,y-4.5, x+19.5,y-6.5, x+19.5,y-2.5],"#8a7563");            // cola
+    ell(c,x+9,y-4,6.5,2.8,"#9c8670"); ell(c,x+9,y-2.6,5,1.5,"#a7afbf");     // cuerpo y pecho gris
+    ell(c,x+3,y-5,2.7,2.4,"#a48d79");                                        // cabeza
+    rect(c,x-.6,y-4.9,1.6,.9,"#3a3a40");                                     // pico
+    ell(c,x+2.4,y-5.4,1.1,1.1,"#2f6fe0"); rect(c,x+2.1,y-5.7,.7,.7,"#111");  // anillo azul y ojo
+    rect(c,x+8,y-1.6,.6,1.6,"#e0607a"); rect(c,x+10,y-1.6,.6,1.6,"#e0607a"); // patas rosadas
+    poly(c,[x+6,y-5, x+13,y-5, x+10,y-5-8*f],"#7d6a58");                     // ala
+    poly(c,[x+7,y-5-1.8*f, x+12,y-5-1.8*f, x+10,y-5-4*f],"#f2efe8");         // franja blanca del ala
+  }}
 };
 // Marraqueta: pan chileno de cuatro "cachitos" dorados
 function marraqueta(c, x, y){
@@ -498,7 +503,7 @@ function setDuck(v){ if(state!=="play") return; S.duck = v; if(v && S.y < GROUND
 function spawn(){
   const lv = S.lvl, r = Math.random();
   let type = "limonero";
-  if(lv>=2 && r<.22) type="jote";
+  if(lv>=2 && r<.22) type="cuculi";
   else if(r<.5) type="limonero";
   else if(r<.78) type = lv>=2 ? "limonero2" : "limonero";
   else type="mango";
@@ -538,7 +543,7 @@ function update(dt){
   S.next -= mv; if(S.next<=0) spawn();
   S.nextBone -= mv; if(S.nextBone<=0) spawnBones();
   // mover
-  S.obs.forEach(o=>{ o.x -= mv * (o.type==="jote"?1.25:1); });
+  S.obs.forEach(o=>{ o.x -= mv * (o.type==="cuculi"?1.25:1); });
   S.obs = S.obs.filter(o=>o.x > -40);
   S.bones.forEach(b=> b.x -= mv);
   const hb = hitbox();
