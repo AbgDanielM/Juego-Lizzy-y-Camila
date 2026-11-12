@@ -80,7 +80,7 @@ let W = 320;                   // ancho lógico, se ajusta a la pantalla
 const GROUND = 128;            // línea del suelo
 const G = 950;                 // gravedad
 const DOGS = {
-  camila:{name:"Camila", w:20, h:15, dh:10, jump:300, draw:drawCamila},
+  camila:{name:"Camila", w:20, h:15, dh:11, jump:300, draw:drawCamila},
   lizy:  {name:"Lizy",   w:30, h:25, dh:15, jump:345, draw:drawLizy}
 };
 const REC_KEY = "camila-lizy-records";
@@ -230,77 +230,115 @@ function ell(c, x, y, rx, ry, col, rot=0){ c.fillStyle=col; c.beginPath(); c.ell
 function rect(c, x, y, w, h, col){ c.fillStyle=col; c.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h)); }
 function poly(c, pts, col){ c.fillStyle=col; c.beginPath(); c.moveTo(pts[0],pts[1]); for(let i=2;i<pts.length;i+=2) c.lineTo(pts[i],pts[i+1]); c.closePath(); c.fill(); }
 
+// ---------- Patas articuladas ----------
+// Ángulos medidos desde la vertical; positivo = hacia adelante. Cada pata tiene muslo, canilla y pie.
+function seg(c, x1, y1, x2, y2, w, col){ c.strokeStyle=col; c.lineWidth=w; c.lineCap="round"; c.beginPath(); c.moveTo(x1,y1); c.lineTo(x2,y2); c.stroke(); }
+function leg(c, hx, hy, L1, L2, a, b, w1, w2, c1, c2, paw){
+  const kx = hx + Math.sin(a)*L1, ky = hy + Math.cos(a)*L1;
+  const px = kx + Math.sin(a+b)*L2, py = ky + Math.cos(a+b)*L2;
+  seg(c, hx, hy, kx, ky, w1, c1); seg(c, kx, ky, px, py, w2, c2);
+  ell(c, px + 0.6, py - 0.2, w2*0.62, w2*0.42, paw);
+}
+// Ciclo de galope: apoyo (la pata va de adelante hacia atrás, recta) y vuelo (se dobla y vuelve adelante)
+function gait(p, front){
+  p = ((p % 1) + 1) % 1;
+  if(p < 0.55){ const u = p/0.55; return front ? [0.5 - 1.05*u, 0] : [0.55 - 1.0*u, -0.45 + 0.25*u]; }
+  const u = (p-0.55)/0.45, s = Math.sin(Math.PI*u);
+  return front ? [-0.55 + 1.05*u + 0.25*s, -1.5*s] : [-0.45 + 1.0*u, -0.2 - 1.2*s];
+}
+function legPose(st, t, phase, front){
+  if(st==="run") return gait(t*3.4 + phase, front);
+  if(st==="air") return front ? [0.95, -0.9] : [-0.9, 0.5];          // en el aire: patas estiradas
+  if(st==="duck") return front ? [1.25, -2.3] : [0.9, -2.1];         // agachada: patas recogidas
+  return front ? [0.05, 0] : [0.25, -0.35];
+}
+
 // Lizy: grande, lomo negro, mejillas cafés, franja blanca en la cara, pecho y patas blancas, cola enroscada con punta blanca
 function drawLizy(c, x, y, t, st){
   const K="#1f1b22", B="#8b5a33", Bl="#a8723f", Wt="#f3ede1", N="#0d0b0e";
-  const run = st==="run", duck = st==="duck", air = st==="air";
-  const ph = run ? Math.sin(t*22) : 0;
+  const run = st==="run", duck = st==="duck";
+  const cyc = t*3.4, bounce = run ? Math.abs(Math.sin(cyc*Math.PI))*1.6 : 0;
+  const drop = duck ? 7 : 0;
   c.save(); c.translate(x, y);
-  if(duck){ c.translate(0, 0); c.scale(1.08, .62); }
-  // patas traseras y delanteras
-  const legs = [[5, ph], [9, -ph], [19, -ph], [23, ph]];
-  legs.forEach(([lx,p],i)=>{
-    const dx = air ? (i<2?-2:2) : p*2.5, lift = air ? 2 : Math.max(0,p)*1.5*(i%2?1:-1);
-    rect(c, lx+dx*.4, -10, 3.2, 5, i<2?B:Wt);
-    rect(c, lx+dx, -6 - (lift>0?lift:0), 3, 6, Wt);
-  });
-  // cola
-  c.strokeStyle=K; c.lineWidth=3.2; c.lineCap="round"; c.beginPath(); c.moveTo(4,-15); c.quadraticCurveTo(-3,-19,1,-25); c.stroke();
-  ell(c, 2.2, -25.5, 2.6, 2.4, Wt);
-  // cuerpo
-  ell(c, 14, -14, 11.5, 6.5, K);
-  ell(c, 14, -10.5, 9, 3, B);
-  ell(c, 5.5, -12.5, 4, 4.5, Bl);
-  ell(c, 22.5, -12, 4.2, 5.5, Wt);
-  // cabeza
-  const hb = run ? Math.sin(t*22)*.6 : 0;
-  c.translate(0, hb);
-  poly(c, [21,-22, 22.5,-31, 25.5,-23], K);          // oreja de atrás
-  poly(c, [24,-22, 26.5,-31.5, 29,-22], K);          // oreja de adelante
-  poly(c, [25.2,-23.5, 26.5,-29, 27.8,-23.5], B);
+  const by = -14 + drop - bounce;                 // centro del cuerpo
+  const hipB = [6, by+2], hipF = [21, by+2];
+  const L1 = duck ? 5 : 6, L2 = duck ? 5 : 6;
+  // patas del lado lejano (más oscuras)
+  let [a,b] = legPose(st, t, .5, false); leg(c, hipB[0]+1.5, hipB[1], L1, L2, a, b, 3.4, 2.4, "#6d4527", "#cfc6b6", "#bdb3a2");
+  [a,b] = legPose(st, t, .62, true);   leg(c, hipF[0]-1, hipF[1], L1, L2, a, b, 3.2, 2.4, "#cfc6b6", "#cfc6b6", "#bdb3a2");
+  // cola: enroscada; agachada queda más baja
+  c.strokeStyle=K; c.lineWidth=3.2; c.lineCap="round"; c.beginPath();
+  const tw = run ? Math.sin(cyc*Math.PI*2)*1.2 : 0;
+  if(duck){ c.moveTo(4, by-1); c.quadraticCurveTo(-3, by-3, -2, by-8); } else { c.moveTo(4, by-1); c.quadraticCurveTo(-3+tw, by-5, 1+tw, by-11); }
+  c.stroke(); ell(c, duck ? -1.8 : 2.2+tw, duck ? by-8.5 : by-11.5, 2.6, 2.4, Wt);
+  // cuerpo (se estira un poco al correr)
+  const stretch = run ? Math.sin(cyc*Math.PI*2)*.8 : 0;
+  ell(c, 14, by, 11.5 + stretch, duck ? 5.5 : 6.5, K);
+  ell(c, 14, by+3.5, 9, 3, B);
+  ell(c, 5.5, by+1.5, 4, 4.5, Bl);
+  ell(c, 22.5, by+2, 4.2, 5.5, Wt);
+  // patas del lado cercano
+  [a,b] = legPose(st, t, 0, false); leg(c, hipB[0], hipB[1], L1, L2, a, b, 3.8, 2.6, B, Wt, "#fffaf0");
+  [a,b] = legPose(st, t, .12, true); leg(c, hipF[0], hipF[1], L1, L2, a, b, 3.4, 2.6, Wt, Wt, "#fffaf0");
+  // cabeza: agachada va más baja y estirada hacia adelante, orejas hacia atrás
+  const hb = run ? Math.sin(cyc*Math.PI*2)*.6 : 0;
+  const hx = duck ? 3 : 0, hy = (duck ? 9 : 0) + hb + (by + 14);
+  c.translate(hx, hy);
+  if(duck){
+    poly(c, [22,-22.5, 18,-26, 24.5,-23.5], K);       // orejas echadas hacia atrás
+    poly(c, [24,-23, 20.5,-27, 27,-23.5], K);
+    poly(c, [23.5,-23.5, 21.5,-25.5, 25.5,-23.8], B);
+  } else {
+    poly(c, [21,-22, 22.5,-31, 25.5,-23], K);
+    poly(c, [24,-22, 26.5,-31.5, 29,-22], K);
+    poly(c, [25.2,-23.5, 26.5,-29, 27.8,-23.5], B);
+  }
   ell(c, 26, -19.5, 5.6, 5, K);
   ell(c, 25, -17, 3.6, 2.8, B);
-  ell(c, 31, -17.6, 4.6, 2.6, Wt);                   // hocico
-  poly(c, [26.2,-24.2, 27.6,-24.2, 30,-19.5, 27.5,-19], Wt); // franja blanca
-  ell(c, 35.2, -18.4, 1.5, 1.3, N);                  // nariz
-  rect(c, 27.6, -21.2, 1.6, 1.6, "#4a2a12");         // ojo
+  ell(c, 31, -17.6, 4.6, 2.6, Wt);
+  poly(c, [26.2,-24.2, 27.6,-24.2, 30,-19.5, 27.5,-19], Wt);
+  ell(c, 35.2, -18.4, 1.5, 1.3, N);
+  rect(c, 27.6, -21.2, 1.6, 1.6, "#4a2a12");
   rect(c, 28, -21.2, .7, .7, "#ffd9a8");
-  if(run && ph>0.3){ rect(c, 31.5, -15.4, 2.2, 2.4, "#e5677a"); }
+  if(run && Math.sin(cyc*Math.PI*2) > 0){ rect(c, 31.5, -15.4, 2.2, 2.4, "#e5677a"); }
   c.restore();
 }
 
 // Camila: chiquita, negra con café, hocico canoso, orejas caídas, patas color crema
 function drawCamila(c, x, y, t, st){
-  const K="#1d1a1c", B="#7d5232", Bt="#a77748", G="#b9b2a6", Wt="#e9e3d6", N="#0d0b0e";
-  const run = st==="run", duck = st==="duck", air = st==="air";
-  const ph = run ? Math.sin(t*26) : 0;
+  const K="#1d1a1c", B="#7d5232", Bt="#a77748", G="#b9b2a6", Wt="#e9e3d6", N="#0d0b0e", Pw="#d8b98c";
+  const run = st==="run", duck = st==="duck";
+  const tt = t*1.15, cyc = tt*3.4, bounce = run ? Math.abs(Math.sin(cyc*Math.PI))*1.1 : 0;   // patas cortas: pasos más rápidos
+  const drop = duck ? 4 : 0;
   c.save(); c.translate(x, y);
-  if(duck){ c.scale(1.1, .68); }
-  const legs = [[3, ph], [6, -ph], [12, -ph], [15, ph]];
-  legs.forEach(([lx,p],i)=>{
-    const dx = air ? (i<2?-1.5:1.5) : p*2;
-    rect(c, lx+dx*.4, -6, 2.6, 3, B);
-    rect(c, lx+dx, -3.5, 2.4, 3.5, "#d8b98c");
-  });
-  // cola peluda
-  c.strokeStyle=K; c.lineWidth=2.6; c.lineCap="round"; c.beginPath(); c.moveTo(2.5,-9); c.quadraticCurveTo(-2,-9,-3,-5 + ph*1.2); c.stroke();
-  ell(c, -2.6, -5 + ph*1.2, 1.6, 1.8, B);
+  const by = -8.5 + drop - bounce;
+  const hipB = [4, by+1.5], hipF = [13.5, by+1.5];
+  const L1 = duck ? 3.4 : 3.8, L2 = duck ? 3.2 : 3.8;
+  let [a,b] = legPose(st, tt, .5, false); leg(c, hipB[0]+1, hipB[1], L1, L2, a, b, 2.6, 2, "#5d3c24", "#b89c74", "#a88f6c");
+  [a,b] = legPose(st, tt, .62, true);   leg(c, hipF[0]-1, hipF[1], L1, L2, a, b, 2.4, 2, "#5d3c24", "#b89c74", "#a88f6c");
+  // cola peluda que se mueve
+  const tw = run ? Math.sin(cyc*Math.PI*2)*1.4 : 0;
+  c.strokeStyle=K; c.lineWidth=2.6; c.lineCap="round"; c.beginPath(); c.moveTo(2.5, by-.5); c.quadraticCurveTo(-2, by-.5, -3, by+3.5+tw); c.stroke();
+  ell(c, -2.6, by+3.5+tw, 1.6, 1.8, B);
   // cuerpo
-  ell(c, 9, -8.5, 8.5, 5, K);
-  ell(c, 9, -6, 6.5, 2.4, B);
-  ell(c, 4, -9.5, 3.4, 3, Bt);
-  ell(c, 12, -11, 3.5, 2, B);
+  ell(c, 9, by, 8.5, duck ? 4.2 : 5, K);
+  ell(c, 9, by+2.5, 6.5, 2.4, B);
+  ell(c, 4, by-1, 3.4, 3, Bt);
+  ell(c, 12, by-2.5, 3.5, 2, B);
+  [a,b] = legPose(st, tt, 0, false);  leg(c, hipB[0], hipB[1], L1, L2, a, b, 2.8, 2.2, B, Pw, "#efdcb8");
+  [a,b] = legPose(st, tt, .12, true); leg(c, hipF[0], hipF[1], L1, L2, a, b, 2.6, 2.2, B, Pw, "#efdcb8");
   // cabeza
-  const hb = run ? Math.sin(t*26)*.5 : 0;
-  c.translate(0, hb);
+  const hb = run ? Math.sin(cyc*Math.PI*2)*.5 : 0;
+  c.translate(duck ? 2 : 0, (duck ? 5 : 0) + hb + (by + 8.5));
   ell(c, 16.5, -12.5, 4.8, 4.4, K);
-  ell(c, 20.4, -10.8, 3.3, 2.3, G);                  // hocico canoso
+  ell(c, 20.4, -10.8, 3.3, 2.3, G);
   ell(c, 21.5, -10, 2, 1.3, Wt);
-  ell(c, 23.4, -11.4, 1.3, 1.1, N);                  // nariz
-  ell(c, 13.6, -11.3, 1.9, 3.6, K, .25);             // oreja caída
-  rect(c, 17.6, -14.6, 1.4, 1.4, "#2a1a10");         // ojo
+  ell(c, 23.4, -11.4, 1.3, 1.1, N);
+  const flap = run ? Math.sin(cyc*Math.PI*2)*.25 : 0;
+  ell(c, 13.6, -11.3, 1.9, 3.6, K, .25 + flap + (duck ? .6 : 0));
+  rect(c, 17.6, -14.6, 1.4, 1.4, "#2a1a10");
   rect(c, 17.9, -14.6, .6, .6, "#e8d0b0");
-  rect(c, 17.2, -16.2, 2.4, .9, G);                  // cejas canosas
+  rect(c, 17.2, -16.2, 2.4, .9, G);
   c.restore();
 }
 
