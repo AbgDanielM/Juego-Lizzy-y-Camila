@@ -258,10 +258,10 @@ function drawBg(c, off, lvl){
   // casa de madera turquesa y auto amarillo, que aparecen de vez en cuando
   const night = i>=3, dc = col=> night ? mixCol(col, "#2a2b5a", .45) : col;
   const po = off*.6;
-  // posiciones fijas en el camino: la casa cada 900 y el auto cada 1300 (desfasados)
-  const each = (every, shift, fn)=>{ for(let n=Math.floor((po-80-shift)/every); n*every+shift < po+W+10; n++){ const x = n*every+shift-po; if(x>-80) fn(x); } };
-  each(900, 380, x=> drawHouse(c, x, GROUND-3, dc));
-  each(1300, 820, x=> drawCar(c, x, GROUND-3, dc));
+  // posiciones fijas en el camino: la casa y el auto cada 1800, separados para que no se tapen
+  const each = (every, shift, fn)=>{ for(let n=Math.floor((po-120-shift)/every); n*every+shift < po+W+10; n++){ const x = n*every+shift-po; if(x>-120) fn(x); } };
+  each(1800, 380, x=> drawHouse(c, x, GROUND-3, dc));
+  each(1800, 1250, x=> drawCar(c, x, GROUND-3, dc));
   // suelo
   rect(c, 0, GROUND, W, H-GROUND, i>=3?"#8c7f6e":"#cbb994");
   c.fillStyle = i>=3?"#776b5c":"#b3a17c";
@@ -270,38 +270,42 @@ function drawBg(c, off, lvl){
 }
 
 
-// Casa de madera turquesa con techo de zinc, tapa café y puerta café
+// Casa de madera turquesa con techo de zinc en forma de pirámide, tapa café y puerta café
 function drawHouse(c, x, y, dc){
   const T=dc("#2b9db3"), Td=dc("#23869a"), Br=dc("#b5763d"), Brd=dc("#8e5a2c"), Z=dc("#c9ced6"), Zd=dc("#a3a9b3"), D=dc("#6e4224");
-  const w=50, h=30;
+  const w=92, h=50, rh=24;
   rect(c, x, y-h, w, h, T);
-  c.fillStyle=Td; for(let k=4;k<w;k+=7) c.fillRect(Math.round(x+k), y-h+4, 1, h-5);
-  rect(c, x+w*.5-.5, y-h+4, 1, h-4, Td);
-  rect(c, x-3, y-h-5, w+6, 5, Br); rect(c, x-3, y-h-1, w+6, 1, Brd);
-  c.fillStyle=Z; c.beginPath(); c.moveTo(x-5, y-h-5); c.lineTo(x+w+5, y-h-5); c.lineTo(x+w+2, y-h-9); c.lineTo(x-2, y-h-9); c.closePath(); c.fill();
-  c.fillStyle=Zd; for(let k=-1;k<w+4;k+=3) c.fillRect(Math.round(x+k), y-h-9, 1, 4);
-  rect(c, x+30, y-19, 11, 19, D); rect(c, x+31, y-18, 9, 17, dc("#7d4c2a"));
-  rect(c, x+31.5, y-13, 8, .8, D); rect(c, x+38, y-10, 1.4, 1.4, dc("#e2c06a"));
+  c.fillStyle=Td; for(let k=6;k<w;k+=9) c.fillRect(Math.round(x+k), y-h+6, 1, h-7);
+  rect(c, x+w*.5-.5, y-h+6, 1, h-6, Td);
+  // tapa café bajo el techo
+  rect(c, x-4, y-h-6, w+8, 6, Br); rect(c, x-4, y-h-1, w+8, 1, Brd);
+  // techo pirámide de zinc
+  const top = y-h-6-rh, cx = x+w/2;
+  c.fillStyle=Z; c.beginPath(); c.moveTo(x-7, y-h-6); c.lineTo(x+w+7, y-h-6); c.lineTo(cx, top); c.closePath(); c.fill();
+  c.strokeStyle=Zd; c.lineWidth=.8;
+  for(let k=-6;k<=w+6;k+=4){ const bx=x+k; c.beginPath(); c.moveTo(bx, y-h-6); c.lineTo(cx+(bx-cx)*.08, top+2); c.stroke(); }
+  rect(c, cx-1, top-1, 2, 2, Zd);
+  // puerta café
+  rect(c, x+58, y-34, 18, 34, D); rect(c, x+59.5, y-32.5, 15, 31, dc("#7d4c2a"));
+  rect(c, x+60, y-22, 14, 1, D); rect(c, x+71, y-17, 2, 2, dc("#e2c06a"));
   rect(c, x, y-1, w, 1, dc("#7d8b8e"));
 }
-// Auto amarillo tipo SUV pequeño, visto de lado
+// Auto amarillo tipo SUV pequeño, visto de lado, con capó largo
 function drawCar(c, x, y, dc){
   const Y=dc("#f0c53e"), Yd=dc("#d7a92a"), G=dc("#2c2e35"), Gl=dc("#4a5160"), Wh=dc("#c9cdd3"), Ti=dc("#1c1c1f");
-  // carrocería
   c.fillStyle=Y; c.beginPath();
-  c.moveTo(x, y-6); c.lineTo(x, y-14); c.lineTo(x+4, y-22); c.lineTo(x+27, y-22); c.lineTo(x+34, y-15); c.lineTo(x+41, y-13); c.lineTo(x+42, y-6); c.closePath(); c.fill();
-  rect(c, x, y-7, 42, 2, Yd);
-  // ventanas
+  c.moveTo(x, y-6); c.lineTo(x, y-14); c.lineTo(x+4, y-22); c.lineTo(x+27, y-22); c.lineTo(x+34, y-15);
+  c.lineTo(x+46, y-13.5); c.quadraticCurveTo(x+50, y-12.5, x+50, y-9); c.lineTo(x+50, y-6); c.closePath(); c.fill();
+  rect(c, x, y-7, 50, 2, Yd);
+  rect(c, x+34, y-14.6, 12, .8, Yd);                 // línea del capó
   c.fillStyle=G; c.beginPath(); c.moveTo(x+3,y-15); c.lineTo(x+6,y-20.5); c.lineTo(x+16,y-20.5); c.lineTo(x+16,y-15); c.closePath(); c.fill();
   c.beginPath(); c.moveTo(x+17.5,y-15); c.lineTo(x+17.5,y-20.5); c.lineTo(x+26.5,y-20.5); c.lineTo(x+32,y-15); c.closePath(); c.fill();
   rect(c, x+7, y-19.5, 6, 1, Gl); rect(c, x+19, y-19.5, 5, 1, Gl);
-  // detalles
   rect(c, x, y-14, 1.6, 4, dc("#c8322f"));           // foco trasero
-  rect(c, x+40, y-12.5, 2, 2, dc("#f4f1e4"));        // foco delantero
+  rect(c, x+47.5, y-12, 2.5, 2.2, dc("#f4f1e4"));    // foco delantero
   rect(c, x+31, y-16, 2.5, 1.6, Y);                  // espejo
-  rect(c, x+11, y-12, 3, .8, Yd); rect(c, x+23, y-12, 3, .8, Yd); // manillas
-  // ruedas
-  [[9,0],[33,0]].forEach(([wx])=>{ ell(c, x+wx, y-4, 4.6, 4.6, Ti); ell(c, x+wx, y-4, 2.6, 2.6, Wh); ell(c, x+wx, y-4, .9, .9, dc("#8c9198")); });
+  rect(c, x+11, y-12, 3, .8, Yd); rect(c, x+23, y-12, 3, .8, Yd);
+  [9, 40].forEach(wx=>{ ell(c, x+wx, y-4, 4.6, 4.6, Ti); ell(c, x+wx, y-4, 2.6, 2.6, Wh); ell(c, x+wx, y-4, .9, .9, dc("#8c9198")); });
 }
 
 // ---------- Obstáculos y huesos ----------
