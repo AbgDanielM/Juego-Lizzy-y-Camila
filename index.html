@@ -114,6 +114,27 @@ function beep(f1, f2, dur, type="square", vol=.07){
   }catch(e){}
 }
 const sJump = ()=>beep(380, 760, .14);
+// Ladrido sintetizado: un "guau" corto. Lizy más grave, Camila más agudo.
+function bark(dogK, small){
+  if(muted) return;
+  try{
+    AC = AC || new (window.AudioContext||window.webkitAudioContext)();
+    const t = AC.currentTime, big = dogK==="lizy";
+    const f0 = (big?330:620) * (small?1.25:1), f1 = (big?170:360) * (small?1.25:1), dur = small? .11 : .2;
+    const o = AC.createOscillator(), o2 = AC.createOscillator(), g = AC.createGain(), bp = AC.createBiquadFilter();
+    o.type="sawtooth"; o2.type="square";
+    o.frequency.setValueAtTime(f0*.8, t); o.frequency.linearRampToValueAtTime(f0, t+dur*.25); o.frequency.exponentialRampToValueAtTime(f1, t+dur);
+    o2.frequency.setValueAtTime(f0*.5, t); o2.frequency.exponentialRampToValueAtTime(f1*.5, t+dur);
+    bp.type="bandpass"; bp.frequency.setValueAtTime(big?900:1500, t); bp.Q.value=1.2;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(.35, t+.015); g.gain.exponentialRampToValueAtTime(.12, t+dur*.6); g.gain.exponentialRampToValueAtTime(0.0001, t+dur);
+    // ruido para que suene más a ladrido
+    const n = AC.createBufferSource(), buf = AC.createBuffer(1, AC.sampleRate*dur, AC.sampleRate), d = buf.getChannelData(0);
+    for(let i=0;i<d.length;i++) d[i] = (Math.random()*2-1) * (1 - i/d.length);
+    n.buffer = buf; const ng = AC.createGain(); ng.gain.value = .25;
+    o.connect(bp); o2.connect(bp); n.connect(ng); ng.connect(bp); bp.connect(g); g.connect(AC.destination);
+    o.start(t); o2.start(t); n.start(t); o.stop(t+dur); o2.stop(t+dur); n.stop(t+dur);
+  }catch(e){}
+}
 const sBone = ()=>{ beep(900, 1300, .08, "square", .05); setTimeout(()=>beep(1300,1700,.08,"square",.05),70); };
 const sHit  = ()=>beep(300, 60, .45, "sawtooth", .09);
 const sLvl  = ()=>{ [523,659,784,1046].forEach((f,i)=>setTimeout(()=>beep(f,f,.12,"triangle",.07),i*110)); };
@@ -234,11 +255,53 @@ function drawBg(c, off, lvl){
   c.beginPath(); c.moveTo(0, GROUND-10);
   for(let x=0;x<=W+10;x+=8){ const wx = x+off*.6; c.lineTo(x, fy+fh-6 - 6*Math.max(0,Math.sin(wx*.035))); }
   c.lineTo(W,GROUND); c.lineTo(0,GROUND); c.fill();
+  // casa de madera turquesa y auto amarillo, que aparecen de vez en cuando
+  const night = i>=3, dc = col=> night ? mixCol(col, "#2a2b5a", .45) : col;
+  const po = off*.6;
+  // posiciones fijas en el camino: la casa cada 900 y el auto cada 1300 (desfasados)
+  const each = (every, shift, fn)=>{ for(let n=Math.floor((po-80-shift)/every); n*every+shift < po+W+10; n++){ const x = n*every+shift-po; if(x>-80) fn(x); } };
+  each(900, 380, x=> drawHouse(c, x, GROUND-3, dc));
+  each(1300, 820, x=> drawCar(c, x, GROUND-3, dc));
   // suelo
   rect(c, 0, GROUND, W, H-GROUND, i>=3?"#8c7f6e":"#cbb994");
   c.fillStyle = i>=3?"#776b5c":"#b3a17c";
   for(let n=0;n<26;n++){ const px = ((n*53.7 - off) % (W+20) + W+20) % (W+20) - 10; c.fillRect(Math.round(px), GROUND+4+(n*7)%22, 2+(n%3), 1); }
   rect(c, 0, GROUND, W, 1, i>=3?"#6e6355":"#a8956f");
+}
+
+
+// Casa de madera turquesa con techo de zinc, tapa café y puerta café
+function drawHouse(c, x, y, dc){
+  const T=dc("#2b9db3"), Td=dc("#23869a"), Br=dc("#b5763d"), Brd=dc("#8e5a2c"), Z=dc("#c9ced6"), Zd=dc("#a3a9b3"), D=dc("#6e4224");
+  const w=50, h=30;
+  rect(c, x, y-h, w, h, T);
+  c.fillStyle=Td; for(let k=4;k<w;k+=7) c.fillRect(Math.round(x+k), y-h+4, 1, h-5);
+  rect(c, x+w*.5-.5, y-h+4, 1, h-4, Td);
+  rect(c, x-3, y-h-5, w+6, 5, Br); rect(c, x-3, y-h-1, w+6, 1, Brd);
+  c.fillStyle=Z; c.beginPath(); c.moveTo(x-5, y-h-5); c.lineTo(x+w+5, y-h-5); c.lineTo(x+w+2, y-h-9); c.lineTo(x-2, y-h-9); c.closePath(); c.fill();
+  c.fillStyle=Zd; for(let k=-1;k<w+4;k+=3) c.fillRect(Math.round(x+k), y-h-9, 1, 4);
+  rect(c, x+30, y-19, 11, 19, D); rect(c, x+31, y-18, 9, 17, dc("#7d4c2a"));
+  rect(c, x+31.5, y-13, 8, .8, D); rect(c, x+38, y-10, 1.4, 1.4, dc("#e2c06a"));
+  rect(c, x, y-1, w, 1, dc("#7d8b8e"));
+}
+// Auto amarillo tipo SUV pequeño, visto de lado
+function drawCar(c, x, y, dc){
+  const Y=dc("#f0c53e"), Yd=dc("#d7a92a"), G=dc("#2c2e35"), Gl=dc("#4a5160"), Wh=dc("#c9cdd3"), Ti=dc("#1c1c1f");
+  // carrocería
+  c.fillStyle=Y; c.beginPath();
+  c.moveTo(x, y-6); c.lineTo(x, y-14); c.lineTo(x+4, y-22); c.lineTo(x+27, y-22); c.lineTo(x+34, y-15); c.lineTo(x+41, y-13); c.lineTo(x+42, y-6); c.closePath(); c.fill();
+  rect(c, x, y-7, 42, 2, Yd);
+  // ventanas
+  c.fillStyle=G; c.beginPath(); c.moveTo(x+3,y-15); c.lineTo(x+6,y-20.5); c.lineTo(x+16,y-20.5); c.lineTo(x+16,y-15); c.closePath(); c.fill();
+  c.beginPath(); c.moveTo(x+17.5,y-15); c.lineTo(x+17.5,y-20.5); c.lineTo(x+26.5,y-20.5); c.lineTo(x+32,y-15); c.closePath(); c.fill();
+  rect(c, x+7, y-19.5, 6, 1, Gl); rect(c, x+19, y-19.5, 5, 1, Gl);
+  // detalles
+  rect(c, x, y-14, 1.6, 4, dc("#c8322f"));           // foco trasero
+  rect(c, x+40, y-12.5, 2, 2, dc("#f4f1e4"));        // foco delantero
+  rect(c, x+31, y-16, 2.5, 1.6, Y);                  // espejo
+  rect(c, x+11, y-12, 3, .8, Yd); rect(c, x+23, y-12, 3, .8, Yd); // manillas
+  // ruedas
+  [[9,0],[33,0]].forEach(([wx])=>{ ell(c, x+wx, y-4, 4.6, 4.6, Ti); ell(c, x+wx, y-4, 2.6, 2.6, Wh); ell(c, x+wx, y-4, .9, .9, dc("#8c9198")); });
 }
 
 // ---------- Obstáculos y huesos ----------
@@ -267,8 +330,8 @@ const score = ()=> Math.floor(S.dist) + S.nb*10;
 function jump(){
   if(state!=="play") return;
   const d = S.dog;
-  if(S.y >= GROUND-0.5){ S.vy = -d.jump; S.jumps = 1; sJump(); }
-  else if(S.jumps < 2){ S.vy = -d.jump*.82; S.jumps = 2; sJump(); for(let k=0;k<6;k++) S.parts.push({x:S.x+d.w/2,y:S.y-2,vx:(Math.random()-.5)*60,vy:Math.random()*30,l:.4,c:"#fff6d6"}); }
+  if(S.y >= GROUND-0.5){ S.vy = -d.jump; S.jumps = 1; bark(dogKey); }
+  else if(S.jumps < 2){ S.vy = -d.jump*.82; S.jumps = 2; bark(dogKey, true); for(let k=0;k<6;k++) S.parts.push({x:S.x+d.w/2,y:S.y-2,vx:(Math.random()-.5)*60,vy:Math.random()*30,l:.4,c:"#fff6d6"}); }
 }
 function setDuck(v){ if(state!=="play") return; S.duck = v; if(v && S.y < GROUND-1) S.vy = Math.max(S.vy, 260); }
 
